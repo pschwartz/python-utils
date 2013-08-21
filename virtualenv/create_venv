@@ -1,0 +1,51 @@
+#!/usr/bin/env python
+#
+# Copyright 2013 Philip Schwartz
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import argparse
+import os
+import subprocess
+import textwrap
+import virtualenv
+
+def main(venv, reqs):
+    output = virtualenv.create_bootstrap_script(textwrap.dedent("""
+import os, subprocess
+def after_install(options, home_dir):
+    etc = join(home_dir, 'etc')
+    if not os.path.exists(etc):
+        os.makedirs(etc)
+    subprocess.call(
+            [
+                join(home_dir, 'bin', 'pip'),
+                'install',
+                '-r',
+                '{reqs}'
+            ]
+        )
+""".format(reqs=reqs)))
+    f = open('bootstrap.py', 'w').write(output)
+
+    subprocess.call(['python', 'bootstrap.py', '--no-site-packages', venv])
+    os.remove(os.path.join(os.curdir, 'bootstrap.py'))
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Build virtualenv')
+    parser.add_argument('virtualenv', help='Name of virtualenv to build.')
+    parser.add_argument('requirements', help='The requirements file to use.')
+    args = parser.parse_args()
+
+    main(args.virtualenv, args.requirements)
